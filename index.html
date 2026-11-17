@@ -61,6 +61,15 @@
 
         // finally draw the poses
         drawPose(pose);
+
+      if (prediction[1].probability > 0.85) {
+        // 增加進度條寬度 (CSS width)
+        energy += 1; 
+        if (energy > 100) { triggerSuccess(); }
+      } else {
+      // 歸零
+      energy = 0; 
+      }
     }
 
     function drawPose(pose) {
