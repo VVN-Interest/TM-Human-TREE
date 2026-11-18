@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <!-- 這是 AI 魔法書，請放在 </head> 的上一行 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>心誠中學 AI 扮花魔法學院</title>
@@ -82,7 +86,7 @@
           <div class="hint-box">提示圖（頭頂比大愛心）</div>
         </div>
         <div class="webcam-area">
-          <div class="webcam-placeholder">玩家即時骨架畫面</div>
+          <div id="webcam-container" class="webcam-placeholder">玩家即時骨架畫面</div>
         </div>
       </div>
     </div>
@@ -113,9 +117,78 @@
     }
 
     // 點擊事件
+    // ==========================================
+    // ⬇️ 從這裡開始是新增的 AI 引擎程式碼 ⬇️
+    // ==========================================
+    
+    // ⚠️ 老師的小叮嚀：這裡要換成你在 Teachable Machine 匯出時得到的網址喔！
+    // 記得網址最後面要保留斜線 /
+    const URL = "https://teachablemachine.withgoogle.com/models/dtch6gqio/"; 
+    
+    let model, webcam, ctx, maxPredictions;
+
+    // 當按下「開始挑戰」時，執行這個 init 函數
     btnStart.addEventListener('click', () => {
-      showScreen(screenGame);
+      showScreen(screenGame); // 1. 先切換到遊戲畫面
+      init(); // 2. 呼叫 AI 引擎起床
     });
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // 載入你的模型
+        model = await tmPose.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // 設定 Webcam 尺寸 (對應我們 CSS 寫的 300px)
+        const size = 300;
+        const flip = true; // 鏡像翻轉，這樣小朋友玩起來方向才順
+        webcam = new tmPose.Webcam(size, size, flip); 
+        await webcam.setup(); // 這裡會跳出「要求使用攝影機」的提示
+        await webcam.play();  // 開始播放鏡頭畫面
+        
+        // 讓瀏覽器不斷更新畫面 (這是遊戲能一直偵測的關鍵)
+        window.requestAnimationFrame(loop);
+
+        // 把 Webcam 產生的畫布 (canvas) 塞進我們剛剛設定的專屬座位裡
+        const container = document.getElementById("webcam-container");
+        container.innerHTML = ""; // 把原本的「玩家即時骨架畫面」文字清掉
+        container.appendChild(webcam.canvas);
+        
+        // 準備一支畫筆 (ctx)，等一下用來畫骨架
+        ctx = webcam.canvas.getContext("2d");
+    }
+
+    async function loop(timestamp) {
+        webcam.update(); // 每一幀更新鏡頭畫面
+        await predict(); // 進行姿勢預測
+        window.requestAnimationFrame(loop); // 無限迴圈
+    }
+
+    async function predict() {
+        // 預測現在的姿勢，並拿到機率分數
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        const prediction = await model.predict(posenetOutput);
+
+        // ===== 這裡就是之後要寫「3 秒集氣能量條」邏輯的地方！ =====
+        // 為了測試，我們先把結果印在開發者工具(Console)裡
+        // console.log(prediction[0].className + ": " + prediction[0].probability.toFixed(2));
+        
+        // 把鏡頭畫面和彩色骨架畫出來
+        drawPose(pose);
+    }
+
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            if (pose) {
+                const minPartConfidence = 0.5; // 信心度超過 0.5 的關節才畫出來
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    }
 
     btnRestart.addEventListener('click', () => {
       showScreen(screenAttract);
@@ -123,3 +196,81 @@
   </script>
 </body>
 </html>
+
+<!-- 這裡是 Teachable Machine Pose Model 的家：負責辨識 -->
+<button type="button" onclick="init()">Start</button>
+<div><canvas id="canvas"></canvas></div>
+<div id="label-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+<script type="text/javascript">
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/pose
+
+    // the link to your model provided by Teachable Machine export panel
+    const URL = "https://teachablemachine.withgoogle.com/models/dtch6gqio/";
+    let model, webcam, ctx, labelContainer, maxPredictions;
+
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // Note: the pose library adds a tmPose object to your window (window.tmPose)
+        model = await tmPose.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const size = 200;
+        const flip = true; // whether to flip the webcam
+        webcam = new tmPose.Webcam(size, size, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append/get elements to the DOM
+        const canvas = document.getElementById("canvas");
+        canvas.width = size; canvas.height = size;
+        ctx = canvas.getContext("2d");
+        labelContainer = document.getElementById("label-container");
+        for (let i = 0; i < maxPredictions; i++) { // and class labels
+            labelContainer.appendChild(document.createElement("div"));
+        }
+    }
+
+    async function loop(timestamp) {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+        // Prediction #1: run input through posenet
+        // estimatePose can take in an image, video or canvas html element
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        // Prediction 2: run input through teachable machine classification model
+        const prediction = await model.predict(posenetOutput);
+
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPrediction =
+                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
+        }
+
+        // finally draw the poses
+        drawPose(pose);
+    }
+
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            // draw the keypoints and skeleton
+            if (pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+            }
+        }
+    }
+</script>
