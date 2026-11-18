@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>心誠中學 AI 扮花魔法學院</title>
+  <title>心誠中學 AI 魔法學院</title>
   
   <!-- 這是 AI 魔法書：TensorFlow.js 與 Teachable Machine 套件 -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
@@ -55,7 +55,7 @@
   <div id="game-app">
     <!-- 1. 待機畫面 -->
     <div id="screen-attract" class="screen active">
-      <h1>🌸 心誠中學 AI 扮花魔法學院 🌸</h1>
+      <h1>🌸 心誠中學 AI 魔法學院 🌸</h1>
       <p>請走到地貼位置，準備開始你的魔法試煉！</p>
       <button id="btn-start" class="game-btn">開始挑戰</button>
     </div>
@@ -70,8 +70,8 @@
       <div class="game-layout">
         <!-- 左側：關卡提示 -->
         <div class="hint-area">
-          <h2 id="level-text">第一關：幼苗 🌱</h2>
-          <div class="hint-box" id="hint-image">請擺出幼苗的姿勢！</div>
+          <h2 id="level-text">🌸 姿勢 1：泥土裡的幼苗</h2>
+          <div class="hint-box" id="hint-image">請擺出幼苗的姿勢！(蹲下)</div>
         </div>
         <!-- 右側：Webcam 畫面 -->
         <div class="webcam-area">
@@ -103,7 +103,7 @@
     let isPlaying = false; // 控制遊戲是否在進行中
     
     // 關卡設定
-    const levelNames = ["第一關：幼苗 🌱", "第二關：綠葉 🌿", "第三關：開花 🌸"];
+    const levelNames = ["🌸 姿勢 1：泥土裡的幼苗", "🌿 姿勢 2：長出綠葉", "🌺 姿勢 3：太陽花盛開"];
     const levelTargetClasses = [0, 1, 2]; // 假設你在 TM 錄製的順序是 0=幼苗, 1=綠葉, 2=開花
 
     // 抓取網頁元素
