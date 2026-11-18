@@ -1,32 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <!-- 這是 AI 魔法書，請放在 </head> 的上一行 -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
-  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>心誠中學 AI 扮花魔法學院</title>
   
-  <!-- 這裡是 CSS 的家：負責漂亮的裝潢 -->
+  <!-- 這是 AI 魔法書：TensorFlow.js 與 Teachable Machine 套件 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+
   <style>
+    /* CSS 裝潢區 */
     body {
       font-family: "微軟正黑體", sans-serif;
-      background-color: #f4fbf4; /* 環保綠色 */
+      background-color: #f4fbf4; 
       text-align: center;
-      margin: 0;
-      padding: 20px;
+      margin: 0; padding: 20px;
     }
-
-    /* 控制畫面顯示與隱藏的魔法 */
     .screen { display: none; }
     .screen.active {
       display: block; 
       animation: fadeIn 0.5s;
     }
-
-    /* 能量條的設計 */
     .progress-container {
       width: 80%; height: 40px; background-color: #ddd;
       border-radius: 20px; margin: 20px auto;
@@ -35,10 +30,8 @@
     .progress-bar {
       width: 0%; /* 遊戲開始時是 0% */
       height: 100%; background-color: #4CAF50;
-      transition: width 0.1s linear;
+      transition: width 0.1s linear; /* 讓集氣看起來很滑順 */
     }
-
-    /* 左右排版 */
     .game-layout {
       display: flex; justify-content: center; gap: 40px; margin-top: 20px;
     }
@@ -46,69 +39,83 @@
       width: 300px; height: 300px; background-color: #e0e0e0;
       border: 2px dashed #999; display: flex;
       align-items: center; justify-content: center; border-radius: 15px;
+      overflow: hidden; /* 讓鏡頭畫面乖乖在框內 */
     }
-
-    /* 按鈕設計 */
     .game-btn {
       font-size: 24px; padding: 10px 30px; background-color: #ff9800;
       color: white; border: none; border-radius: 30px; cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2); margin-top: 20px;
     }
     .game-btn:hover { background-color: #f57c00; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; } to { opacity: 1; }
-    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
 <body>
 
-  <!-- 這裡是 HTML 的家：負責房子的骨架與內容 -->
   <div id="game-app">
-    
     <!-- 1. 待機畫面 -->
     <div id="screen-attract" class="screen active">
       <h1>🌸 心誠中學 AI 扮花魔法學院 🌸</h1>
       <p>請走到地貼位置，準備開始你的魔法試煉！</p>
-      <div class="webcam-placeholder">Webcam 畫面準備中...</div>
-      <br>
       <button id="btn-start" class="game-btn">開始挑戰</button>
     </div>
 
     <!-- 2. 闖關畫面 -->
     <div id="screen-game" class="screen">
+      <!-- 能量條 -->
       <div class="progress-container">
         <div id="energy-bar" class="progress-bar"></div>
       </div>
+      
       <div class="game-layout">
+        <!-- 左側：關卡提示 -->
         <div class="hint-area">
           <h2 id="level-text">第一關：幼苗 🌱</h2>
-          <div class="hint-box">提示圖（頭頂比大愛心）</div>
+          <div class="hint-box" id="hint-image">請擺出幼苗的姿勢！</div>
         </div>
+        <!-- 右側：Webcam 畫面 -->
         <div class="webcam-area">
-          <div id="webcam-container" class="webcam-placeholder">玩家即時骨架畫面</div>
+          <div id="webcam-container" class="webcam-placeholder">鏡頭啟動中...</div>
         </div>
       </div>
     </div>
 
     <!-- 3. 通關畫面 -->
     <div id="screen-success" class="screen">
-      <h1>🎉 任務完成！太棒了！ 🎉</h1>
+      <h1>🎉 任務完成！你是一朵美麗的花！ 🎉</h1>
       <button id="btn-restart" class="game-btn">再玩一次</button>
     </div>
-
   </div>
 
-  <!-- 這裡是 JavaScript 的家：負責水電與邏輯 -->
   <script>
-    // 抓取畫面與按鈕
+    // ==========================================
+    // 遊戲核心邏輯與 AI 引擎
+    // ==========================================
+
+    // ⚠️ 記得把這裡換成你的模型網址！⚠️
+    const URL = "https://teachablemachine.withgoogle.com/models/這裡換成你的專屬ID/"; 
+    
+    let model, webcam, ctx, maxPredictions;
+
+    // 遊戲狀態變數
+    let currentLevel = 0; // 0: 幼苗, 1: 綠葉, 2: 開花
+    let energy = 0;       // 能量值 0 到 100
+    let isPlaying = false; // 控制遊戲是否在進行中
+    
+    // 關卡設定
+    const levelNames = ["第一關：幼苗 🌱", "第二關：綠葉 🌿", "第三關：開花 🌸"];
+    const levelTargetClasses = [0, 1, 2]; // 假設你在 TM 錄製的順序是 0=幼苗, 1=綠葉, 2=開花
+
+    // 抓取網頁元素
     const screenAttract = document.getElementById('screen-attract');
     const screenGame = document.getElementById('screen-game');
     const screenSuccess = document.getElementById('screen-success');
     const btnStart = document.getElementById('btn-start');
     const btnRestart = document.getElementById('btn-restart');
+    const energyBar = document.getElementById('energy-bar');
+    const levelText = document.getElementById('level-text');
 
-    // 切換畫面的魔法
+    // 畫面切換函數
     function showScreen(screenToShow) {
       screenAttract.classList.remove('active');
       screenGame.classList.remove('active');
@@ -116,161 +123,113 @@
       screenToShow.classList.add('active');
     }
 
-    // 點擊事件
-    // ==========================================
-    // ⬇️ 從這裡開始是新增的 AI 引擎程式碼 ⬇️
-    // ==========================================
-    
-    // ⚠️ 老師的小叮嚀：這裡要換成你在 Teachable Machine 匯出時得到的網址喔！
-    // 記得網址最後面要保留斜線 /
-    const URL = "https://teachablemachine.withgoogle.com/models/dtch6gqio/"; 
-    
-    let model, webcam, ctx, maxPredictions;
-
-    // 當按下「開始挑戰」時，執行這個 init 函數
+    // 按下開始按鈕
     btnStart.addEventListener('click', () => {
-      showScreen(screenGame); // 1. 先切換到遊戲畫面
-      init(); // 2. 呼叫 AI 引擎起床
+      showScreen(screenGame);
+      currentLevel = 0;
+      energy = 0;
+      energyBar.style.width = "0%";
+      levelText.innerText = levelNames[currentLevel];
+      isPlaying = true;
+      init(); // 啟動 AI 鏡頭
     });
 
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        // 載入你的模型
-        model = await tmPose.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        // 設定 Webcam 尺寸 (對應我們 CSS 寫的 300px)
-        const size = 300;
-        const flip = true; // 鏡像翻轉，這樣小朋友玩起來方向才順
-        webcam = new tmPose.Webcam(size, size, flip); 
-        await webcam.setup(); // 這裡會跳出「要求使用攝影機」的提示
-        await webcam.play();  // 開始播放鏡頭畫面
-        
-        // 讓瀏覽器不斷更新畫面 (這是遊戲能一直偵測的關鍵)
-        window.requestAnimationFrame(loop);
-
-        // 把 Webcam 產生的畫布 (canvas) 塞進我們剛剛設定的專屬座位裡
-        const container = document.getElementById("webcam-container");
-        container.innerHTML = ""; // 把原本的「玩家即時骨架畫面」文字清掉
-        container.appendChild(webcam.canvas);
-        
-        // 準備一支畫筆 (ctx)，等一下用來畫骨架
-        ctx = webcam.canvas.getContext("2d");
-    }
-
-    async function loop(timestamp) {
-        webcam.update(); // 每一幀更新鏡頭畫面
-        await predict(); // 進行姿勢預測
-        window.requestAnimationFrame(loop); // 無限迴圈
-    }
-
-    async function predict() {
-        // 預測現在的姿勢，並拿到機率分數
-        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
-        const prediction = await model.predict(posenetOutput);
-
-        // ===== 這裡就是之後要寫「3 秒集氣能量條」邏輯的地方！ =====
-        // 為了測試，我們先把結果印在開發者工具(Console)裡
-        // console.log(prediction[0].className + ": " + prediction[0].probability.toFixed(2));
-        
-        // 把鏡頭畫面和彩色骨架畫出來
-        drawPose(pose);
-    }
-
-    function drawPose(pose) {
-        if (webcam.canvas) {
-            ctx.drawImage(webcam.canvas, 0, 0);
-            if (pose) {
-                const minPartConfidence = 0.5; // 信心度超過 0.5 的關節才畫出來
-                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
-                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
-            }
-        }
-    }
-
+    // 按下重新開始
     btnRestart.addEventListener('click', () => {
       showScreen(screenAttract);
     });
-  </script>
-</body>
-</html>
 
-<!-- 這裡是 Teachable Machine Pose Model 的家：負責辨識 -->
-<button type="button" onclick="init()">Start</button>
-<div><canvas id="canvas"></canvas></div>
-<div id="label-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
-<script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/pose
-
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "https://teachablemachine.withgoogle.com/models/dtch6gqio/";
-    let model, webcam, ctx, labelContainer, maxPredictions;
-
+    // 初始化 AI 模型
     async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
-
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // Note: the pose library adds a tmPose object to your window (window.tmPose)
         model = await tmPose.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
 
-        // Convenience function to setup a webcam
-        const size = 200;
-        const flip = true; // whether to flip the webcam
-        webcam = new tmPose.Webcam(size, size, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
+        const size = 300;
+        const flip = true; 
+        webcam = new tmPose.Webcam(size, size, flip); 
+        await webcam.setup(); 
         await webcam.play();
+        
         window.requestAnimationFrame(loop);
 
-        // append/get elements to the DOM
-        const canvas = document.getElementById("canvas");
-        canvas.width = size; canvas.height = size;
-        ctx = canvas.getContext("2d");
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
-        }
+        const container = document.getElementById("webcam-container");
+        container.innerHTML = ""; 
+        container.appendChild(webcam.canvas);
+        ctx = webcam.canvas.getContext("2d");
     }
 
+    // 遊戲迴圈
     async function loop(timestamp) {
-        webcam.update(); // update the webcam frame
-        await predict();
-        window.requestAnimationFrame(loop);
+        if (!isPlaying) return; // 如果遊戲結束就停止更新
+        webcam.update(); 
+        await predict(); 
+        window.requestAnimationFrame(loop); 
     }
 
+    // 預測與能量條邏輯
     async function predict() {
-        // Prediction #1: run input through posenet
-        // estimatePose can take in an image, video or canvas html element
         const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
-        // Prediction 2: run input through teachable machine classification model
         const prediction = await model.predict(posenetOutput);
 
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
+        // --- 核心：能量條集氣邏輯 ---
+        // 抓出目前關卡要求的動作機率 (例如目前是關卡0 幼苗)
+        let targetIndex = levelTargetClasses[currentLevel];
+        let currentProb = prediction[targetIndex].probability;
+
+        if (currentProb > 0.85) {
+            // 如果動作正確且機率大於 85%，能量增加！
+            // 每次迴圈約 16 毫秒，加 0.6 大約 2.5 ~ 3 秒會集滿 (100)
+            energy += 0.6; 
+        } else {
+            // 一旦姿勢走樣，能量瞬間無情歸零！
+            energy = 0; 
         }
 
-        // finally draw the poses
+        // 確保能量不會超過 100
+        if (energy > 100) energy = 100;
+        
+        // 更新 CSS 進度條的寬度
+        energyBar.style.width = energy + "%";
+
+        // 檢查是否過關
+        if (energy >= 100) {
+            levelUp();
+        }
+
+        // 畫出骨架
         drawPose(pose);
     }
 
+    // 過關邏輯
+    function levelUp() {
+        currentLevel++; // 進入下一關
+        energy = 0;     // 能量清空，準備下一輪集氣
+        energyBar.style.width = "0%";
+
+        if (currentLevel >= 3) {
+            // 如果三關都破了，遊戲勝利！
+            isPlaying = false;
+            webcam.stop(); // 關閉鏡頭省資源
+            showScreen(screenSuccess);
+        } else {
+            // 還有下一關，更新畫面提示文字
+            levelText.innerText = levelNames[currentLevel];
+        }
+    }
+
+    // 畫筆邏輯
     function drawPose(pose) {
         if (webcam.canvas) {
             ctx.drawImage(webcam.canvas, 0, 0);
-            // draw the keypoints and skeleton
             if (pose) {
-                const minPartConfidence = 0.5;
+                const minPartConfidence = 0.5; 
                 tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
                 tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
             }
         }
     }
-</script>
+  </script>
+</body>
+</html>
