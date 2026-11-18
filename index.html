@@ -1,77 +1,125 @@
-
-<script>
-  // 1. 抓取我們剛剛做好的三個畫面
-  const screenAttract = document.getElementById('screen-attract');
-  const screenGame = document.getElementById('screen-game');
-  const screenSuccess = document.getElementById('screen-success');
-
-  // 2. 抓取開始與重新開始按鈕
-  const btnStart = document.getElementById('btn-start');
-  const btnRestart = document.getElementById('btn-restart');
-
-  // 3. 寫一個專門用來「切換畫面」的魔法函數
-  function showScreen(screenToShow) {
-    // 先把所有畫面都拔掉 active (隱藏起來)
-    screenAttract.classList.remove('active');
-    screenGame.classList.remove('active');
-    screenSuccess.classList.remove('active');
-    
-    // 把指定的畫面加上 active (顯示出來)
-    screenToShow.classList.add('active');
-  }
-
-  // 4. 當學生大使按下「開始挑戰」
-  btnStart.addEventListener('click', () => {
-    showScreen(screenGame); // 切換到闖關畫面
-    console.log("遊戲開始！(之後這裡會觸發開啟 Webcam)");
-  });
-
-  // 5. 當遊戲結束按下「再玩一次」
-  btnRestart.addEventListener('click', () => {
-    showScreen(screenAttract); // 回到待機畫面
-  });
-</script>
-<body>
-<div id="game-app">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心誠中學 AI 扮花魔法學院</title>
   
-  <!-- 1. 待機畫面 (Attract Mode) -->
-  <!-- 預設給它 'active' 這個 class 讓它一開始就顯示 -->
-  <div id="screen-attract" class="screen active">
-    <h1>🌸 心誠中學 AI 扮花魔法學院 🌸</h1>
-    <p>請走到地貼位置，準備開始你的魔法試煉！</p>
-    <!-- 這裡之後會放 Webcam 畫面 -->
-    <div class="webcam-placeholder">Webcam 畫面準備中...</div>
-    <button id="btn-start" class="game-btn">開始挑戰</button>
-  </div>
+  <!-- 這裡是 CSS 的家：負責漂亮的裝潢 -->
+  <style>
+    body {
+      font-family: "微軟正黑體", sans-serif;
+      background-color: #f4fbf4; /* 環保綠色 */
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+    }
 
-  <!-- 2. 闖關畫面 (Game Mode) -->
-  <div id="screen-game" class="screen">
-    <!-- 能量條：這是整個遊戲的靈魂！ -->
-    <div class="progress-container">
-      <div id="energy-bar" class="progress-bar"></div>
-    </div>
+    /* 控制畫面顯示與隱藏的魔法 */
+    .screen { display: none; }
+    .screen.active {
+      display: block; 
+      animation: fadeIn 0.5s;
+    }
+
+    /* 能量條的設計 */
+    .progress-container {
+      width: 80%; height: 40px; background-color: #ddd;
+      border-radius: 20px; margin: 20px auto;
+      border: 3px solid #333; overflow: hidden;
+    }
+    .progress-bar {
+      width: 0%; /* 遊戲開始時是 0% */
+      height: 100%; background-color: #4CAF50;
+      transition: width 0.1s linear;
+    }
+
+    /* 左右排版 */
+    .game-layout {
+      display: flex; justify-content: center; gap: 40px; margin-top: 20px;
+    }
+    .hint-box, .webcam-placeholder {
+      width: 300px; height: 300px; background-color: #e0e0e0;
+      border: 2px dashed #999; display: flex;
+      align-items: center; justify-content: center; border-radius: 15px;
+    }
+
+    /* 按鈕設計 */
+    .game-btn {
+      font-size: 24px; padding: 10px 30px; background-color: #ff9800;
+      color: white; border: none; border-radius: 30px; cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    .game-btn:hover { background-color: #f57c00; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 這裡是 HTML 的家：負責房子的骨架與內容 -->
+  <div id="game-app">
     
-    <div class="game-layout">
-      <!-- 左側：過關提示圖 -->
-      <div class="hint-area">
-        <h2 id="level-text">第一關：幼苗 🌱</h2>
-        <div class="hint-box">提示圖（頭頂比大愛心）</div>
+    <!-- 1. 待機畫面 -->
+    <div id="screen-attract" class="screen active">
+      <h1>🌸 心誠中學 AI 扮花魔法學院 🌸</h1>
+      <p>請走到地貼位置，準備開始你的魔法試煉！</p>
+      <div class="webcam-placeholder">Webcam 畫面準備中...</div>
+      <br>
+      <button id="btn-start" class="game-btn">開始挑戰</button>
+    </div>
+
+    <!-- 2. 闖關畫面 -->
+    <div id="screen-game" class="screen">
+      <div class="progress-container">
+        <div id="energy-bar" class="progress-bar"></div>
       </div>
-      
-      <!-- 右側：玩家 Webcam 實況 -->
-      <div class="webcam-area">
-        <div class="webcam-placeholder">玩家即時骨架畫面</div>
+      <div class="game-layout">
+        <div class="hint-area">
+          <h2 id="level-text">第一關：幼苗 🌱</h2>
+          <div class="hint-box">提示圖（頭頂比大愛心）</div>
+        </div>
+        <div class="webcam-area">
+          <div class="webcam-placeholder">玩家即時骨架畫面</div>
+        </div>
       </div>
     </div>
+
+    <!-- 3. 通關畫面 -->
+    <div id="screen-success" class="screen">
+      <h1>🎉 任務完成！太棒了！ 🎉</h1>
+      <button id="btn-restart" class="game-btn">再玩一次</button>
+    </div>
+
   </div>
 
-  <!-- 3. 通關畫面 (Success Mode) -->
-  <div id="screen-success" class="screen">
-    <h1>🎉 任務完成！太棒了！ 🎉</h1>
-    <!-- 這裡之後會用 JS 噴灑彩帶特效 -->
-    <img src="success-cute-illustration.png" alt="可愛插圖" style="display:none;">
-    <button id="btn-restart" class="game-btn">再玩一次</button>
-  </div>
+  <!-- 這裡是 JavaScript 的家：負責水電與邏輯 -->
+  <script>
+    // 抓取畫面與按鈕
+    const screenAttract = document.getElementById('screen-attract');
+    const screenGame = document.getElementById('screen-game');
+    const screenSuccess = document.getElementById('screen-success');
+    const btnStart = document.getElementById('btn-start');
+    const btnRestart = document.getElementById('btn-restart');
 
-</div>
+    // 切換畫面的魔法
+    function showScreen(screenToShow) {
+      screenAttract.classList.remove('active');
+      screenGame.classList.remove('active');
+      screenSuccess.classList.remove('active');
+      screenToShow.classList.add('active');
+    }
+
+    // 點擊事件
+    btnStart.addEventListener('click', () => {
+      showScreen(screenGame);
+    });
+
+    btnRestart.addEventListener('click', () => {
+      showScreen(screenAttract);
+    });
+  </script>
 </body>
+</html>
