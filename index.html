@@ -1,3 +1,38 @@
+<body>
+      <script>
+  // 1. 抓取我們剛剛做好的三個畫面
+  const screenAttract = document.getElementById('screen-attract');
+  const screenGame = document.getElementById('screen-game');
+  const screenSuccess = document.getElementById('screen-success');
+
+  // 2. 抓取開始與重新開始按鈕
+  const btnStart = document.getElementById('btn-start');
+  const btnRestart = document.getElementById('btn-restart');
+
+  // 3. 寫一個專門用來「切換畫面」的魔法函數
+  function showScreen(screenToShow) {
+    // 先把所有畫面都拔掉 active (隱藏起來)
+    screenAttract.classList.remove('active');
+    screenGame.classList.remove('active');
+    screenSuccess.classList.remove('active');
+    
+    // 把指定的畫面加上 active (顯示出來)
+    screenToShow.classList.add('active');
+  }
+
+  // 4. 當學生大使按下「開始挑戰」
+  btnStart.addEventListener('click', () => {
+    showScreen(screenGame); // 切換到闖關畫面
+    console.log("遊戲開始！(之後這裡會觸發開啟 Webcam)");
+  });
+
+  // 5. 當遊戲結束按下「再玩一次」
+  btnRestart.addEventListener('click', () => {
+    showScreen(screenAttract); // 回到待機畫面
+  });
+</script>
+</body>
+/*
 <div>Teachable Machine Pose Model</div>
 <button type="button" onclick="init()">Start</button>
 <div><canvas id="canvas"></canvas></div>
@@ -83,4 +118,4 @@
             }
         }
     }
-</script>
+</script>*/
