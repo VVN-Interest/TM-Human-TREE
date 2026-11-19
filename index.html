@@ -1,235 +1,575 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>心誠中學 AI 魔法學院</title>
-  
-  <!-- 這是 AI 魔法書：TensorFlow.js 與 Teachable Machine 套件 -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心誠中學 Open Day：AI 校園特工大挑戰</title>
+    <!-- 引入 Tailwind CSS (極簡快速排版) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Teachable Machine Pose 相關庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+    <!-- 引入 Canvas Confetti (通關彩帶特效) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        /* 自訂字體與全螢幕設定 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a; /* 科技感深藍底色 */
+            color: white;
+            overflow: hidden; /* 防止螢幕滾動 */
+            user-select: none;
+        }
 
-  <style>
-    /* CSS 裝潢區 */
-    body {
-      font-family: "微軟正黑體", sans-serif;
-      background-color: #f4fbf4; 
-      text-align: center;
-      margin: 0; padding: 20px;
-    }
-    .screen { display: none; }
-    .screen.active {
-      display: block; 
-      animation: fadeIn 0.5s;
-    }
-    .progress-container {
-      width: 80%; height: 40px; background-color: #ddd;
-      border-radius: 20px; margin: 20px auto;
-      border: 3px solid #333; overflow: hidden;
-    }
-    .progress-bar {
-      width: 0%; /* 遊戲開始時是 0% */
-      height: 100%; background-color: #4CAF50;
-      transition: width 0.1s linear; /* 讓集氣看起來很滑順 */
-    }
-    .game-layout {
-      display: flex; justify-content: center; gap: 40px; margin-top: 20px;
-    }
-    .hint-box, .webcam-placeholder {
-      width: 500px; height: 500px; background-color: #e0e0e0;
-      border: 2px dashed #999; display: flex;
-      align-items: center; justify-content: center; border-radius: 15px;
-      overflow: hidden; /* 讓鏡頭畫面乖乖在框內 */
-    }
-    .game-btn {
-      font-size: 24px; padding: 10px 30px; background-color: #ff9800;
-      color: white; border: none; border-radius: 30px; cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2); margin-top: 20px;
-    }
-    .game-btn:hover { background-color: #f57c00; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  </style>
+        /* 遊戲畫面容器，保持 16:9 比例 */
+        .game-container {
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            width: 100%;
+            max-width: 177.78vh; /* 16/9 * 100 */
+            margin: 0 auto;
+            position: relative;
+            background: #1e293b;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        /* 隱藏原生鏡頭，只顯示 Canvas (因為我們要自己畫骨架) */
+        #webcam-container canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* 鏡像翻轉，讓使用者覺得像照鏡子 */
+        }
+
+        /* 能量條特效 (CSS 動畫) */
+        .progress-bar {
+            transition: width 0.1s linear, background-color 0.3s ease;
+        }
+        .charging-glow {
+            animation: pulse-glow 0.5s infinite alternate;
+        }
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 10px #facc15, 0 0 20px #facc15; }
+            to { box-shadow: 0 0 20px #ef4444, 0 0 40px #ef4444; }
+        }
+
+        /* 動態提示圖示 */
+        .pose-icon {
+            animation: bounce-slight 2s infinite;
+        }
+        @keyframes bounce-slight {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* 畫面切換淡入淡出 */
+        .screen {
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .hidden-screen {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .active-screen {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+    </style>
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen">
 
-  <div id="game-app">
-    <!-- 1. 待機畫面 -->
-    <div id="screen-attract" class="screen active">
-      <h1> AI 校園特工大挑戰 </h1>
-      <p>請走到地貼位置，準備開始你的校園特工試煉！</p>
-      <button id="btn-start" class="game-btn">開始挑戰</button>
-    </div>
-
-    <!-- 2. 闖關畫面 -->
-    <div id="screen-game" class="screen">
-      <!-- 能量條 -->
-      <div class="progress-container">
-        <div id="energy-bar" class="progress-bar"></div>
-      </div>
-      
-      <div class="game-layout">
-        <!-- 左側：關卡提示 -->
-        <div class="hint-area">
-          <h2 id="level-text">🌸 姿勢 1：泥土裡的幼苗</h2>
-          <div class="hint-box" id="hint-image">請擺出幼苗的姿勢！(蹲下)</div>
-        </div>
-        <!-- 右側：Webcam 畫面 -->
-        <div class="webcam-area">
-          <div id="webcam-container" class="webcam-placeholder">鏡頭啟動中...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3. 通關畫面 -->
-    <div id="screen-success" class="screen">
-      <h1>🎉 任務完成！你成功通過特工試煉！ 🎉</h1>
-      <button id="btn-restart" class="game-btn">再玩一次</button>
-    </div>
-  </div>
-
-  <script>
-    // ==========================================
-    // 遊戲核心邏輯與 AI 引擎
-    // ==========================================
-
-    // ⚠️ 記得把這裡換成你的模型網址！⚠️
-    const URL = "https://teachablemachine.withgoogle.com/models/eVCVTj9bp/"; 
-    
-    let model, webcam, ctx, maxPredictions;
-
-    // 遊戲狀態變數
-    let currentLevel = 0; // 0: 幼苗, 1: 綠葉, 2: 開花
-    let energy = 0;       // 能量值 0 到 100
-    let isPlaying = false; // 控制遊戲是否在進行中
-    
-    // 關卡設定
-    const levelNames = ["姿勢 1：隱身", "姿勢 2：偽裝", "姿勢 3：平衡"];
-    const levelTargetClasses = [0, 1, 2]; // 假設你在 TM 錄製的順序是 0=幼苗, 1=綠葉, 2=開花
-
-    // 抓取網頁元素
-    const screenAttract = document.getElementById('screen-attract');
-    const screenGame = document.getElementById('screen-game');
-    const screenSuccess = document.getElementById('screen-success');
-    const btnStart = document.getElementById('btn-start');
-    const btnRestart = document.getElementById('btn-restart');
-    const energyBar = document.getElementById('energy-bar');
-    const levelText = document.getElementById('level-text');
-
-    // 畫面切換函數
-    function showScreen(screenToShow) {
-      screenAttract.classList.remove('active');
-      screenGame.classList.remove('active');
-      screenSuccess.classList.remove('active');
-      screenToShow.classList.add('active');
-    }
-
-    // 按下開始按鈕
-    btnStart.addEventListener('click', () => {
-      showScreen(screenGame);
-      currentLevel = 0;
-      energy = 0;
-      energyBar.style.width = "0%";
-      levelText.innerText = levelNames[currentLevel];
-      isPlaying = true;
-      init(); // 啟動 AI 鏡頭
-    });
-
-    // 按下重新開始
-    btnRestart.addEventListener('click', () => {
-      showScreen(screenAttract);
-    });
-
-    // 初始化 AI 模型
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-        model = await tmPose.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        const size = 500;
-        const flip = true; 
-        webcam = new tmPose.Webcam(size, size, flip); 
-        await webcam.setup(); 
-        await webcam.play();
+    <div class="game-container relative">
         
-        window.requestAnimationFrame(loop);
+        <!-- ==================== 1. 待機畫面 (Attract Mode) ==================== -->
+        <div id="screen-start" class="screen active-screen bg-slate-900 z-50">
+            <div class="text-center space-y-8">
+                <!-- 假裝有 Logo -->
+                <div class="w-32 h-32 mx-auto bg-blue-500 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.8)]">
+                    <span class="text-4xl font-bold">心誠</span>
+                </div>
+                <h1 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 tracking-wider drop-shadow-lg">
+                    AI 校園特工大挑戰
+                </h1>
+                <p class="text-2xl text-gray-300">請走到地貼位置，準備啟動隱藏魔法！</p>
+                <button id="btn-start" class="mt-8 px-12 py-5 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-black text-3xl font-bold rounded-full shadow-[0_0_20px_rgba(250,204,21,0.6)] transform transition hover:scale-105 active:scale-95">
+                    開始挑戰 START
+                </button>
+            </div>
+            <!-- 右下角狀態提示 -->
+            <div id="loading-msg" class="absolute bottom-4 right-4 text-sm text-gray-400 hidden">
+                正在載入 AI 模型... 請稍候...
+            </div>
+        </div>
 
-        const container = document.getElementById("webcam-container");
-        container.innerHTML = ""; 
-        container.appendChild(webcam.canvas);
-        ctx = webcam.canvas.getContext("2d");
-    }
+        <!-- ==================== 2. 闖關畫面 (Game Mode) ==================== -->
+        <div id="screen-game" class="screen hidden-screen z-10">
+            <!-- 攝影機與骨架畫布 (底層) -->
+            <div id="webcam-container" class="absolute inset-0 w-full h-full">
+                <!-- Canvas 會透過 JS 自動注入在這裡 -->
+            </div>
 
-    // 遊戲迴圈
-    async function loop(timestamp) {
-        if (!isPlaying) return; // 如果遊戲結束就停止更新
-        webcam.update(); 
-        await predict(); 
-        window.requestAnimationFrame(loop); 
-    }
+            <!-- UI 覆蓋層 (頂層) -->
+            <div class="absolute inset-0 flex flex-col justify-between p-8 pointer-events-none">
+                
+                <!-- 頂部：狀態與進度條 -->
+                <div class="w-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="bg-black/60 px-6 py-2 rounded-full backdrop-blur-sm border border-slate-600">
+                            <span class="text-xl font-bold text-yellow-400">關卡 <span id="ui-level">1</span> / 3</span>
+                        </div>
+                        <div class="bg-black/60 px-6 py-2 rounded-full backdrop-blur-sm border border-slate-600">
+                            <span class="text-xl font-bold">目標姿勢：<span id="ui-pose-name" class="text-green-400">隱身</span></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 能量進度條 -->
+                    <div class="w-full h-12 bg-gray-800/80 rounded-full border-4 border-slate-700 overflow-hidden relative shadow-lg">
+                        <div id="progress-fill" class="progress-bar h-full bg-gradient-to-r from-green-400 to-green-600 w-0"></div>
+                        <div class="absolute inset-0 flex items-center justify-center font-bold text-xl drop-shadow-md text-white mix-blend-difference">
+                            維持 3 秒鐘！
+                        </div>
+                    </div>
+                </div>
 
-    // 預測與能量條邏輯
-    async function predict() {
-        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
-        const prediction = await model.predict(posenetOutput);
+                <!-- 左側：提示圖 (SVG Placeholder) -->
+                <div class="self-start mt-auto mb-10 bg-black/50 p-6 rounded-2xl backdrop-blur-md border border-slate-600 flex flex-col items-center pose-icon">
+                    <p class="text-lg mb-2 text-gray-300">請跟著做</p>
+                    <!-- 這裡用 SVG 代替圖片，方便單檔執行 -->
+                    <div id="pose-hint-icon" class="w-48 h-48 flex items-center justify-center text-9xl">
+                        🦸‍♂️
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 關卡切換提示 (過場) -->
+            <div id="level-transition" class="absolute inset-0 bg-black/80 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+                <h2 id="transition-text" class="text-7xl font-black text-yellow-400 scale-50 transition-transform duration-300"></h2>
+            </div>
+        </div>
 
-        // --- 核心：能量條集氣邏輯 ---
-        // 抓出目前關卡要求的動作機率 (例如目前是關卡0 幼苗)
-        let targetIndex = levelTargetClasses[currentLevel];
-        let currentProb = prediction[targetIndex].probability;
+        <!-- ==================== 3. 通關畫面 (Success Mode) ==================== -->
+        <div id="screen-success" class="screen hidden-screen bg-gradient-to-b from-green-900 to-slate-900 z-50">
+            <div class="text-center space-y-6 z-10">
+                <div class="text-[120px] animate-bounce">🏆</div>
+                <h1 class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 drop-shadow-lg">
+                    任務完成！
+                </h1>
+                <p class="text-4xl font-bold text-white mt-4">你成功通過特工試煉！</p>
+                <p id="countdown-text" class="text-xl text-gray-400 mt-8">60 秒後自動回到首頁...</p>
+                
+                <button id="btn-home" class="mt-8 px-10 py-4 bg-white text-green-900 text-2xl font-bold rounded-full shadow-lg hover:bg-gray-200 transition transform hover:scale-105 active:scale-95 pointer-events-auto">
+                    返回總部 (首頁)
+                </button>
+            </div>
+        </div>
 
-        if (currentProb > 0.85) {
-            // 如果動作正確且機率大於 85%，能量增加！
-            // 每次迴圈約 16 毫秒，加 0.6 大約 2.5 ~ 3 秒會集滿 (100)
-            energy += 0.6; 
-        } else {
-            // 一旦姿勢走樣，能量瞬間無情歸零！
-            energy = 0; 
-        }
+    </div>
 
-        // 確保能量不會超過 100
-        if (energy > 100) energy = 100;
+    <!-- ==================== JavaScript 遊戲邏輯 ==================== -->
+    <script>
+        /**
+         * 【注意事項】
+         * 請將下方的 URL 替換為你在 Teachable Machine 匯出的模型連結。
+         * 例如： "https://teachablemachine.withgoogle.com/models/XXXXXXX/"
+         * 注意：模型需要訓練至少 4 個 Class (隱身, 偽裝, 平衡, 以及一個 "None/背景" 類別)
+         */
+        const URL = "https://teachablemachine.withgoogle.com/models/eVCVTj9bp/"; 
         
-        // 更新 CSS 進度條的寬度
-        energyBar.style.width = energy + "%";
+        let model, webcam, ctx, labelContainer, maxPredictions;
+        let isModelLoaded = false;
+        let isGameRunning = false;
 
-        // 檢查是否過關
-        if (energy >= 100) {
-            levelUp();
+        // 遊戲設定
+        const CONFIDENCE_THRESHOLD = 0.85; // 信心水準 > 85%
+        const REQUIRED_HOLD_TIME = 3000; // 需要維持 3000 毫秒 (3秒)
+        const GAME_POSES = [
+            { name: "隱身", icon: "🥷" },
+            { name: "偽裝", icon: "🌳" },
+            { name: "平衡", icon: "🦩" }
+        ];
+        
+        let currentPosesQueue = [];
+        let currentTargetPose = null;
+        let currentLevel = 1;
+        
+        // 計時與狀態變數
+        let holdStartTime = 0;
+        let isHolding = false;
+        let lastFrameTime = 0;
+        let returnHomeTimeout;
+
+        // UI 元素
+        const screenStart = document.getElementById('screen-start');
+        const screenGame = document.getElementById('screen-game');
+        const screenSuccess = document.getElementById('screen-success');
+        const btnStart = document.getElementById('btn-start');
+        const btnHome = document.getElementById('btn-home');
+        const progressFill = document.getElementById('progress-fill');
+        const uiLevel = document.getElementById('ui-level');
+        const uiPoseName = document.getElementById('ui-pose-name');
+        const poseHintIcon = document.getElementById('pose-hint-icon');
+        const levelTransition = document.getElementById('level-transition');
+        const transitionText = document.getElementById('transition-text');
+        const loadingMsg = document.getElementById('loading-msg');
+        const countdownText = document.getElementById('countdown-text');
+
+        // --- 音效合成器 (Web Audio API) ---
+        // 為了避免外部音檔載入失敗，我們用原生的 Web Audio API 製作「集氣」和「成功」音效！
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playChargeBeep(progressRatio) {
+            // 隨進度增加，音調變高
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 400 + (progressRatio * 400); 
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        // 畫出骨架
-        drawPose(pose);
-    }
-
-    // 過關邏輯
-    function levelUp() {
-        currentLevel++; // 進入下一關
-        energy = 0;     // 能量清空，準備下一輪集氣
-        energyBar.style.width = "0%";
-
-        if (currentLevel >= 3) {
-            // 如果三關都破了，遊戲勝利！
-            isPlaying = false;
-            webcam.stop(); // 關閉鏡頭省資源
-            showScreen(screenSuccess);
-        } else {
-            // 還有下一關，更新畫面提示文字
-            levelText.innerText = levelNames[currentLevel];
+        function playSuccessSound() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.4);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            osc.stop(audioCtx.currentTime + 0.5);
         }
-    }
 
-    // 畫筆邏輯
-    function drawPose(pose) {
-        if (webcam.canvas) {
-            ctx.drawImage(webcam.canvas, 0, 0);
-            if (pose) {
-                const minPartConfidence = 0.5; 
-                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
-                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
+        // --- 初始化 Teachable Machine 模型 ---
+        async function initTM() {
+            if(isModelLoaded) return;
+            loadingMsg.classList.remove('hidden');
+            btnStart.innerText = "載入中...";
+            btnStart.disabled = true;
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            try {
+                // 檢查是否使用預設假網址，如果是則啟用模擬模式 (供預覽測試用)
+                if(URL === "YOUR_TM_MODEL_URL_HERE") {
+                    console.warn("未提供 TM 模型網址，將啟用模擬測試模式。");
+                    simulateInitialization();
+                    return;
+                }
+
+                model = await tmPose.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
+
+                // 設置 Webcam
+                const size = Math.min(window.innerWidth, window.innerHeight) * 0.8; // 基於視窗大小
+                const flip = true; 
+                webcam = new tmPose.Webcam(1280, 720, flip); // 設定高畫質 16:9
+                await webcam.setup(); 
+                await webcam.play();
+                
+                // 準備 Canvas
+                const canvas = document.createElement("canvas");
+                canvas.width = 1280;
+                canvas.height = 720;
+                ctx = canvas.getContext("2d");
+                document.getElementById("webcam-container").appendChild(canvas);
+                
+                isModelLoaded = true;
+                window.requestAnimationFrame(loop);
+                
+                loadingMsg.classList.add('hidden');
+                btnStart.innerText = "開始挑戰 START";
+                btnStart.disabled = false;
+
+            } catch (err) {
+                alert("無法載入模型，請檢查控制台錯誤。若是在預覽環境，請使用模擬模式。");
+                console.error(err);
+                simulateInitialization(); // 發生錯誤時切換到模擬模式
             }
         }
-    }
-  </script>
+
+        // --- 遊戲流程控制 ---
+        
+        // 1. 開始遊戲按鈕事件
+        btnStart.addEventListener('click', async () => {
+            if(!isModelLoaded) {
+                await initTM();
+            }
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            startGame();
+        });
+
+        // 打亂陣列 (Fisher-Yates Shuffle)
+        function shuffleArray(array) {
+            let curId = array.length;
+            while (0 !== curId) {
+                let randId = Math.floor(Math.random() * curId);
+                curId -= 1;
+                let tmp = array[curId];
+                array[curId] = array[randId];
+                array[randId] = tmp;
+            }
+            return array;
+        }
+
+        function startGame() {
+            // 切換畫面
+            screenStart.classList.remove('active-screen');
+            screenStart.classList.add('hidden-screen');
+            screenGame.classList.remove('hidden-screen');
+            screenGame.classList.add('active-screen');
+
+            // 準備關卡資料
+            currentPosesQueue = shuffleArray([...GAME_POSES]);
+            currentLevel = 1;
+            isGameRunning = true;
+            
+            setupNextLevel();
+        }
+
+        function setupNextLevel() {
+            if (currentPosesQueue.length === 0) {
+                triggerSuccess();
+                return;
+            }
+
+            currentTargetPose = currentPosesQueue.shift();
+            
+            // 更新 UI
+            uiLevel.innerText = currentLevel;
+            uiPoseName.innerText = currentTargetPose.name;
+            poseHintIcon.innerText = currentTargetPose.icon;
+            
+            resetProgress();
+            
+            // 顯示過場動畫
+            showTransition(`關卡 ${currentLevel}：${currentTargetPose.name}!`);
+        }
+
+        function showTransition(text) {
+            transitionText.innerText = text;
+            levelTransition.style.opacity = '1';
+            transitionText.style.transform = 'scale(1.2)';
+            
+            setTimeout(() => {
+                levelTransition.style.opacity = '0';
+                transitionText.style.transform = 'scale(0.5)';
+            }, 1500); // 1.5秒後消失
+        }
+
+        function triggerSuccess() {
+            isGameRunning = false;
+            screenGame.classList.remove('active-screen');
+            screenGame.classList.add('hidden-screen');
+            screenSuccess.classList.remove('hidden-screen');
+            screenSuccess.classList.add('active-screen');
+
+            playSuccessSound();
+
+            // Canvas Confetti 彩帶噴發特效
+            let duration = 3 * 1000;
+            let animationEnd = Date.now() + duration;
+            let defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+            let interval = setInterval(function() {
+                let timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                let particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+
+            // 自動倒數回首頁
+            let timeLeft = 60;
+            countdownText.innerText = `${timeLeft} 秒後自動回到首頁...`;
+            returnHomeTimeout = setInterval(() => {
+                timeLeft--;
+                countdownText.innerText = `${timeLeft} 秒後自動回到首頁...`;
+                if(timeLeft <= 0) {
+                    resetToHome();
+                }
+            }, 1000);
+        }
+
+        // 返回首頁按鈕
+        btnHome.addEventListener('click', resetToHome);
+
+        function resetToHome() {
+            clearInterval(returnHomeTimeout);
+            screenSuccess.classList.remove('active-screen');
+            screenSuccess.classList.add('hidden-screen');
+            screenStart.classList.remove('hidden-screen');
+            screenStart.classList.add('active-screen');
+            resetProgress();
+        }
+
+        // --- 核心更新邏輯 (Frame Loop) ---
+
+        async function loop(timestamp) {
+            webcam.update(); // 刷新鏡頭
+            
+            if (isGameRunning && levelTransition.style.opacity === '0') {
+                await predict(timestamp);
+            } else if (!isGameRunning && isModelLoaded) {
+                // 如果在待機畫面，只畫骨架不作判斷，吸引目光
+                const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+                drawPoseOnCanvas(pose);
+            }
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict(timestamp) {
+            // 預測姿勢
+            const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+            const prediction = await model.predict(posenetOutput);
+
+            // 尋找目前目標姿勢的信心水準
+            let currentConfidence = 0;
+            for (let i = 0; i < maxPredictions; i++) {
+                // 假設你在 TM 設定的 Class 名字剛好等於 "隱身", "偽裝", "平衡"
+                // 實務上請確保 TM 的 class name 和 GAME_POSES 裡的 name 完全一致！
+                if (prediction[i].className === currentTargetPose.name) {
+                    currentConfidence = prediction[i].probability;
+                    break;
+                }
+            }
+
+            handleGameLogic(currentConfidence, timestamp);
+            drawPoseOnCanvas(pose); // 畫出優化過後的骨架
+        }
+
+        function handleGameLogic(confidence, timestamp) {
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const deltaTime = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+
+            if (confidence >= CONFIDENCE_THRESHOLD) {
+                // 姿勢正確，開始/繼續集氣
+                if (!isHolding) {
+                    isHolding = true;
+                    holdStartTime = timestamp;
+                }
+                
+                let holdDuration = timestamp - holdStartTime;
+                let progressRatio = holdDuration / REQUIRED_HOLD_TIME;
+                
+                // 更新 UI 能量條
+                progressFill.style.width = `${Math.min(progressRatio * 100, 100)}%`;
+                
+                // 每 200ms 發出滴滴聲
+                if (holdDuration % 200 < 50) { 
+                    playChargeBeep(progressRatio); 
+                }
+
+                // 加入發光特效
+                progressFill.classList.add('charging-glow');
+                
+                // 顏色漸變 (Tailwind 的 class 處理比較死，這裡用 inline CSS 覆蓋比較平滑)
+                if(progressRatio > 0.6) {
+                    progressFill.style.backgroundColor = '#ef4444'; // 紅色 (快滿了)
+                } else if (progressRatio > 0.3) {
+                    progressFill.style.backgroundColor = '#eab308'; // 黃色
+                }
+
+                // 檢查是否達標 3 秒
+                if (holdDuration >= REQUIRED_HOLD_TIME) {
+                    currentLevel++;
+                    setupNextLevel();
+                }
+
+            } else {
+                // 姿勢走樣或放下來了，迅速歸零
+                resetProgress();
+            }
+        }
+
+        function resetProgress() {
+            isHolding = false;
+            holdStartTime = 0;
+            progressFill.style.width = '0%';
+            progressFill.classList.remove('charging-glow');
+            progressFill.style.backgroundColor = ''; // 恢復預設 class 顏色
+        }
+
+        // --- 視覺優化：繪製骨架 ---
+        function drawPoseOnCanvas(pose) {
+            if (webcam.canvas) {
+                ctx.drawImage(webcam.canvas, 0, 0);
+                if (pose) {
+                    const minPartConfidence = 0.5;
+                    // Sunny 的優化：把線條加粗，顏色換成搶眼的螢光藍/綠，增加科技感！
+                    ctx.lineWidth = 8;
+                    ctx.strokeStyle = '#00ffcc'; // 螢光青色
+                    tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx, 6, '#ffff00'); // 節點用黃色，半徑6
+                    tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx, 8, '#00ffcc'); 
+                }
+            }
+        }
+
+
+        // =========================================================================
+        // 【模擬模式】 供沒有真實模型/Webcam 的環境測試預覽 UI 使用
+        // =========================================================================
+        function simulateInitialization() {
+            console.log("--- 啟動模擬測試模式 ---");
+            isModelLoaded = true;
+            loadingMsg.classList.add('hidden');
+            btnStart.innerText = "開始挑戰 START";
+            btnStart.disabled = false;
+            
+            // 創建一個假的 Canvas 背景
+            const canvas = document.createElement("canvas");
+            canvas.width = 1280;
+            canvas.height = 720;
+            ctx = canvas.getContext("2d");
+            document.getElementById("webcam-container").appendChild(canvas);
+            
+            // 監聽滑鼠移動來模擬信心水準 (滑鼠在畫面右半邊視為姿勢正確 > 0.85)
+            let mockConfidence = 0;
+            document.body.addEventListener('mousemove', (e) => {
+                if(isGameRunning) {
+                    mockConfidence = (e.clientX / window.innerWidth > 0.5) ? 0.9 : 0.1;
+                }
+            });
+
+            // 假的迴圈
+            function mockLoop(timestamp) {
+                // 畫假背景
+                ctx.fillStyle = "#1e293b";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#cbd5e1";
+                ctx.font = "40px sans-serif";
+                ctx.fillText("模擬鏡頭畫面 (請將滑鼠移至視窗右側來模擬姿勢正確)", 100, 360);
+
+                if (isGameRunning && levelTransition.style.opacity === '0') {
+                    handleGameLogic(mockConfidence, timestamp);
+                }
+                window.requestAnimationFrame(mockLoop);
+            }
+            window.requestAnimationFrame(mockLoop);
+        }
+
+    </script>
 </body>
 </html>
