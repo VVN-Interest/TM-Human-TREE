@@ -282,14 +282,14 @@
                 // 設置 Webcam
                 const size = Math.min(window.innerWidth, window.innerHeight) * 0.8; // 基於視窗大小
                 const flip = true; 
-                webcam = new tmPose.Webcam(500, 500, flip); // 設定高畫質 16:9
+                webcam = new tmPose.Webcam(640, 360, flip); // 設定高畫質 16:9
                 await webcam.setup(); 
                 await webcam.play();
                 
                 // 準備 Canvas
                 const canvas = document.createElement("canvas");
-                canvas.width = 500;
-                canvas.height = 500;
+                canvas.width = 640;
+                canvas.height = 360;
                 ctx = canvas.getContext("2d");
                 document.getElementById("webcam-container").appendChild(canvas);
                 
