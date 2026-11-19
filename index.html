@@ -55,8 +55,8 @@
   <div id="game-app">
     <!-- 1. 待機畫面 -->
     <div id="screen-attract" class="screen active">
-      <h1>🌸 心誠中學 AI 魔法學院 🌸</h1>
-      <p>請走到地貼位置，準備開始你的魔法試煉！</p>
+      <h1> AI 校園特工大挑戰 </h1>
+      <p>請走到地貼位置，準備開始你的校園特工試煉！</p>
       <button id="btn-start" class="game-btn">開始挑戰</button>
     </div>
 
@@ -82,7 +82,7 @@
 
     <!-- 3. 通關畫面 -->
     <div id="screen-success" class="screen">
-      <h1>🎉 任務完成！你是一朵美麗的花！ 🎉</h1>
+      <h1>🎉 任務完成！你成功通過特工試煉！ 🎉</h1>
       <button id="btn-restart" class="game-btn">再玩一次</button>
     </div>
   </div>
@@ -103,7 +103,7 @@
     let isPlaying = false; // 控制遊戲是否在進行中
     
     // 關卡設定
-    const levelNames = ["🌸 姿勢 1：泥土裡的幼苗", "🌿 姿勢 2：長出綠葉", "🌺 姿勢 3：太陽花盛開"];
+    const levelNames = ["姿勢 1：隱身", "姿勢 2：偽裝", "姿勢 3：平衡"];
     const levelTargetClasses = [0, 1, 2]; // 假設你在 TM 錄製的順序是 0=幼苗, 1=綠葉, 2=開花
 
     // 抓取網頁元素
