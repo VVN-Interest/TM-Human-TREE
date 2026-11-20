@@ -23,12 +23,12 @@
             user-select: none;
         }
 
-        /* 遊戲畫面容器，保持 16:9 比例 */
+        /* 遊戲畫面容器，改為 1:1 比例 */
         .game-container {
-            aspect-ratio: 16 / 9;
+            aspect-ratio: 1 / 1;
             max-height: 100vh;
             width: 100%;
-            max-width: 177.78vh; /* 16/9 * 100 */
+            max-width: 100vh; /* 1/1 * 100 */
             margin: 0 auto;
             position: relative;
             background: #1e293b;
@@ -41,7 +41,7 @@
         #webcam-container canvas {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* 改用 contain 確保不剪裁 */
             transform: scaleX(-1); /* 鏡像翻轉，讓使用者覺得像照鏡子 */
         }
 
@@ -182,7 +182,7 @@
         /**
          * 【注意事項】
          * 請將下方的 URL 替換為你在 Teachable Machine 匯出的模型連結。
-         * 例如： "https://teachablemachine.withgoogle.com/models/XXXXXXX/"
+         * 例如： "https://teachablemachine.withgoogle.com/models/eVCVTj9bp/"
          * 注意：模型需要訓練至少 4 個 Class (隱身, 偽裝, 平衡, 以及一個 "None/背景" 類別)
          */
         const URL = "https://teachablemachine.withgoogle.com/models/eVCVTj9bp/"; 
@@ -282,14 +282,14 @@
                 // 設置 Webcam
                 const size = Math.min(window.innerWidth, window.innerHeight) * 0.8; // 基於視窗大小
                 const flip = true; 
-                webcam = new tmPose.Webcam(640, 360, flip); // 設定高畫質 16:9
+                webcam = new tmPose.Webcam(720, 720, flip); // 改為 1:1 正方形解析度 (720x720)，避免變形與剪裁
                 await webcam.setup(); 
                 await webcam.play();
                 
                 // 準備 Canvas
                 const canvas = document.createElement("canvas");
-                canvas.width = 640;
-                canvas.height = 360;
+                canvas.width = 720;
+                canvas.height = 720;
                 ctx = canvas.getContext("2d");
                 document.getElementById("webcam-container").appendChild(canvas);
                 
@@ -540,7 +540,7 @@
             
             // 創建一個假的 Canvas 背景
             const canvas = document.createElement("canvas");
-            canvas.width = 1280;
+            canvas.width = 720;
             canvas.height = 720;
             ctx = canvas.getContext("2d");
             document.getElementById("webcam-container").appendChild(canvas);
@@ -559,8 +559,8 @@
                 ctx.fillStyle = "#1e293b";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = "#cbd5e1";
-                ctx.font = "40px sans-serif";
-                ctx.fillText("模擬鏡頭畫面 (請將滑鼠移至視窗右側來模擬姿勢正確)", 100, 360);
+                ctx.font = "30px sans-serif";
+                ctx.fillText("模擬鏡頭畫面 (請將滑鼠移至視窗右側模擬)", 60, 360);
 
                 if (isGameRunning && levelTransition.style.opacity === '0') {
                     handleGameLogic(mockConfidence, timestamp);
