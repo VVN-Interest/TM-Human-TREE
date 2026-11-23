@@ -25,10 +25,10 @@
 
         /* 遊戲畫面容器，改為 1:1 比例 */
         .game-container {
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 16 / 9;
             max-height: 100vh;
             width: 100%;
-            max-width: 100vh; /* 1/1 * 100 */
+            max-width: 177.78vh; /* ✅ 16/9 * 100 */
             margin: 0 auto;
             position: relative;
             background: #1e293b;
@@ -283,14 +283,14 @@
                 // 設置 Webcam
                 const size = Math.min(window.innerWidth, window.innerHeight) * 0.8; // 基於視窗大小
                 const flip = true; 
-                webcam = new tmPose.Webcam(720, 720, flip); // 改為 1:1 正方形解析度 (720x720)，避免變形與剪裁
+                webcam = new tmPose.Webcam(640, 630, flip); // 改為 1:1 正方形解析度 (720x720)，避免變形與剪裁
                 await webcam.setup(); 
                 await webcam.play();
                 
                 // 準備 Canvas
                 const canvas = document.createElement("canvas");
-                canvas.width = 720;
-                canvas.height = 720;
+                canvas.width = 640;
+                canvas.height = 360;
                 ctx = canvas.getContext("2d");
                 document.getElementById("webcam-container").appendChild(canvas);
                 
