@@ -284,14 +284,14 @@
                 // 設置 Webcam
                 const size = Math.min(window.innerWidth, window.innerHeight) * 0.8; // 基於視窗大小
                 const flip = true; 
-                webcam = new tmPose.Webcam(640, 630, flip); // 改為 1:1 正方形解析度 (720x720)，避免變形與剪裁
+                webcam = new tmPose.Webcam(640, 480, flip); // 改為 1:1 正方形解析度 (720x720)，避免變形與剪裁
                 await webcam.setup(); 
                 await webcam.play();
                 
                 // 準備 Canvas
                 const canvas = document.createElement("canvas");
                 canvas.width = 640;
-                canvas.height = 360;
+                canvas.height = 480;
                 ctx = canvas.getContext("2d");
                 document.getElementById("webcam-container").appendChild(canvas);
                 
