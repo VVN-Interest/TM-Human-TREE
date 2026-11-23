@@ -146,9 +146,9 @@
                 <!-- 左側：提示圖 (SVG Placeholder) -->
                 <div class="self-start mt-auto mb-10 bg-black/50 p-6 rounded-2xl backdrop-blur-md border border-slate-600 flex flex-col items-center pose-icon">
                     <p class="text-lg mb-2 text-gray-300">請跟著做</p>
-                    <!-- 這裡用 SVG 代替圖片，方便單檔執行 -->
-                    <div id="pose-hint-icon" class="w-48 h-48 flex items-center justify-center text-9xl">
-                        🦸‍♂️
+                    <!-- ✅ 修改後：加入 img 標籤來準備接收 PNG 圖片 -->
+                    <div id="pose-hint-icon" class="w-48 h-48 flex items-center justify-center">
+                        <img id="pose-img" src="" alt="姿勢提示圖" class="w-full h-full object-contain drop-shadow-lg" />
                     </div>
                 </div>
             </div>
@@ -194,10 +194,11 @@
         // 遊戲設定
         const CONFIDENCE_THRESHOLD = 0.85; // 信心水準 > 85%
         const REQUIRED_HOLD_TIME = 3000; // 需要維持 3000 毫秒 (3秒)
+        // ✅ 修改後：填入你真實的 PNG 圖片路徑
         const GAME_POSES = [
-            { name: "隱身", icon: "🥷" },
-            { name: "偽裝", icon: "🌳" },
-            { name: "平衡", icon: "🦩" }
+            { name: "隱身", image: "./images/B1.png" },      // 請確認檔名與副檔名正確
+            { name: "偽裝", image: "./images/G2.png" },
+            { name: "平衡", image: "./images/B3.png" }
         ];
         
         let currentPosesQueue = [];
@@ -357,7 +358,11 @@
             // 更新 UI
             uiLevel.innerText = currentLevel;
             uiPoseName.innerText = currentTargetPose.name;
-            poseHintIcon.innerText = currentTargetPose.icon;
+            
+
+            // ✅ 修改後：取得 img 標籤，並更改它的 src 屬性
+            const poseImg = document.getElementById('pose-img');
+            poseImg.src = currentTargetPose.image;
             
             resetProgress();
             
