@@ -41,8 +41,9 @@
         #webcam-container canvas {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* 改用 contain 確保不剪裁 */
-            transform: scaleX(-1); /* 鏡像翻轉，讓使用者覺得像照鏡子 */
+            object-fit: contain; /* 關鍵！完整保留 100% 畫面 */
+            background-color: #000000; /* 萬一螢幕比例不同，旁邊補黑邊，像看電影一樣有質感 */
+            transform: scaleX(-1); /* 保持鏡像翻轉 */
         }
 
         /* 能量條特效 (CSS 動畫) */
