@@ -193,7 +193,7 @@
         let isGameRunning = false;
 
         // 遊戲設定
-        const CONFIDENCE_THRESHOLD = 0.85; // 信心水準 > 85%
+        const CONFIDENCE_THRESHOLD = 0.80; // 信心水準 > 80%
         const REQUIRED_HOLD_TIME = 3000; // 需要維持 3000 毫秒 (3秒)
         // ✅ 修改後：填入你真實的 PNG 圖片路徑
         const GAME_POSES = [
@@ -546,8 +546,8 @@
             
             // 創建一個假的 Canvas 背景
             const canvas = document.createElement("canvas");
-            canvas.width = 640;
-            canvas.height = 480;
+            canvas.width = 200;
+            canvas.height = 200;
             ctx = canvas.getContext("2d");
             document.getElementById("webcam-container").appendChild(canvas);
             
