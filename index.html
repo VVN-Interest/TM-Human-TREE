@@ -525,7 +525,7 @@
                 if (pose) {
                     const minPartConfidence = 0.5;
                     // Sunny 的優化：把線條加粗，顏色換成搶眼的螢光藍/綠，增加科技感！
-                    ctx.lineWidth = 8;
+                    ctx.lineWidth = 2;
                     ctx.strokeStyle = '#00ffcc'; // 螢光青色
                     tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx, 6, '#ffff00'); // 節點用黃色，半徑6
                     tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx, 8, '#00ffcc'); 
