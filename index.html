@@ -184,7 +184,7 @@
          * 【注意事項】
          * 請將下方的 URL 替換為你在 Teachable Machine 匯出的模型連結。
          * 例如： "https://teachablemachine.withgoogle.com/models/eVCVTj9bp/"
-         * 注意：模型需要訓練至少 4 個 Class (隱身, 偽裝, 平衡, 以及一個 "None/背景" 類別)
+         * 注意：模型需要訓練至少 4 個 Class (Hide, Fake, Balance, 以及一個 "None/背景" 類別)
          */
         const URL = "https://teachablemachine.withgoogle.com/models/eULokndSO/"; 
         
@@ -197,9 +197,9 @@
         const REQUIRED_HOLD_TIME = 3000; // 需要維持 3000 毫秒 (3秒)
         // ✅ 修改後：填入你真實的 PNG 圖片路徑
         const GAME_POSES = [
-            { name: "隱身", image: "./image/B1.png" },      // 請確認檔名與副檔名正確
-            { name: "偽裝", image: "./image/B2.png" },
-            { name: "平衡", image: "./image/B3.png" }
+            { name: "Hide", image: "./image/B1.png" },      // 請確認檔名與副檔名正確
+            { name: "Fake", image: "./image/B2.png" },
+            { name: "Balance", image: "./image/B3.png" }
         ];
         
         let currentPosesQueue = [];
