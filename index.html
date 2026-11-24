@@ -43,7 +43,7 @@
             height: 100%;
             object-fit: contain; /* 關鍵！完整保留 100% 畫面 */
             background-color: #0f172a; /* 萬一螢幕比例不同，旁邊補黑邊，像看電影一樣有質感 */
-            transform: scaleX(-1); /* 保持鏡像翻轉 */
+            
         }
 
         /* 能量條特效 (CSS 動畫) */
@@ -453,6 +453,7 @@
             // 尋找目前目標姿勢的信心水準
             let currentConfidence = 0;
             for (let i = 0; i < maxPredictions; i++) {
+                console.log(`AI類別: [${prediction[i].className}] | 分數: ${(prediction[i].probability * 100).toFixed(0)}%`);
                 // 假設你在 TM 設定的 Class 名字剛好等於 "隱身", "偽裝", "平衡"
                 // 實務上請確保 TM 的 class name 和 GAME_POSES 裡的 name 完全一致！
                 if (prediction[i].className === currentTargetPose.name) {
